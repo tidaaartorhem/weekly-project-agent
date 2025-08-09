@@ -1,0 +1,44 @@
+name: Weekly Project Agent
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Specific project number to publish (1-based index)."
+        required: true
+        type: string
+  schedule:
+    - cron: '0 14 * * MON'  # Monday at 14:00 UTC (10:00 Toronto)
+env:
+  TZ: America/Toronto
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: pip install --no-cache-dir -r weekly_project_agent/requirements.txt
+      - name: Debug environment
+        run: |
+          echo "Current date/time: $(date)"
+          echo "Working directory: $(pwd)"
+          echo "Listing files:"
+          ls -R .
+      - name: Run agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.AGENT_TOKEN }}
+          GITHUB_USERNAME: ${{ secrets.GH_USERNAME }}
+          PROJECT: ${{ inputs.project }}
+        run: |
+          echo "Running weekly project agent for project $PROJECT..."
+          if [ -z "$PROJECT" ]; then
+            echo "Error: No project number supplied."
+            exit 1
+          fi
+          python weekly_project_agent/weekly_project_agent.py --project "$PROJECT"
